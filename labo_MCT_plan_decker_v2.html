@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MCT XENOBIO // ACCÈS MATRICE — SECTION DELTA</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&display=swap');
+  :root {
+    --bg:#020608; --bg2:#060e12; --panel:#071018; --border:#0d3a4a;
+    --cyan:#00e5ff; --cyan2:#00b8cc; --cyan3:#004a5c;
+    --red:#ff2244; --red2:#8b0020;
+    --orange:#ff8800; --green:#00ff88; --green2:#005533;
+    --yellow:#ffdd00; --grey:#1a2a30; --grey2:#0d1e26;
+    --text:#7ab8c8; --text2:#3a6878;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Share Tech Mono',monospace;min-height:100vh;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.18) 2px,rgba(0,0,0,.18) 4px);pointer-events:none;z-index:9999;}
+
+  header{padding:11px 24px 9px;border-bottom:1px solid var(--cyan3);display:flex;align-items:center;gap:14px;background:linear-gradient(90deg,rgba(0,229,255,.04) 0%,transparent 60%);}
+  .hl{font-family:'Orbitron',monospace;font-size:.72rem;font-weight:900;color:var(--cyan);letter-spacing:.2em;text-transform:uppercase;text-shadow:0 0 12px rgba(0,229,255,.5);}
+  .hsep{color:var(--cyan3);}
+  .hsub{font-size:.6rem;color:var(--text2);letter-spacing:.12em;}
+  .hr{margin-left:auto;display:flex;gap:18px;align-items:center;}
+  .hs{font-size:.6rem;color:var(--text2);display:flex;flex-direction:column;align-items:flex-end;gap:1px;}
+  .hs .lbl{font-size:.5rem;letter-spacing:.15em;text-transform:uppercase;opacity:.6;}
+  .hs .val{color:var(--cyan);}
+  .hs .val.danger{color:var(--red);animation:blink .8s infinite;}
+  .hs .val.ok{color:var(--green);}
+  .hs .val.warn{color:var(--orange);}
+
+  #jb{padding:5px 24px;background:rgba(0,229,255,.03);border-bottom:1px solid rgba(0,229,255,.08);display:flex;gap:20px;align-items:center;}
+  .jbi{font-size:.56rem;color:var(--text2);letter-spacing:.1em;display:flex;gap:5px;align-items:center;}
+  .jbi .dot{width:5px;height:5px;border-radius:50%;}
+  .dot.active{background:var(--green);box-shadow:0 0 6px var(--green);animation:pulse 2s infinite;}
+  .dot.danger{background:var(--red);box-shadow:0 0 6px var(--red);animation:blink .6s infinite;}
+  .dot.warn{background:var(--orange);animation:pulse 1.5s infinite;}
+  .jbbc{margin-left:auto;font-size:.56rem;color:var(--text2);}
+  .jbbc span{color:var(--cyan);}
+
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.15}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+  @keyframes flicker{0%,100%{opacity:1}3%{opacity:.7}6%{opacity:1}60%{opacity:1}62%{opacity:.85}64%{opacity:1}}
+  @keyframes glitch{0%,90%,100%{transform:none;filter:none}92%{transform:translateX(3px);filter:hue-rotate(90deg)}94%{transform:translateX(-2px)}96%{transform:none;filter:none}}
+
+  main{display:grid;grid-template-columns:1fr 360px;height:calc(100vh - 84px);}
+
+  #map-panel{position:relative;background:var(--bg2);overflow:hidden;cursor:crosshair;}
+  #map-canvas{width:100%;height:100%;display:block;}
+
+  #map-title{position:absolute;top:12px;left:50%;transform:translateX(-50%);font-family:'Orbitron',monospace;font-size:.68rem;font-weight:700;color:rgba(0,229,255,.2);letter-spacing:.3em;text-transform:uppercase;pointer-events:none;z-index:15;white-space:nowrap;}
+
+  #legend{position:absolute;bottom:12px;left:12px;background:rgba(2,6,8,.96);border:1px solid var(--cyan3);padding:9px 13px;z-index:20;min-width:190px;}
+  #legend h4{font-size:.52rem;color:var(--cyan2);letter-spacing:.22em;margin-bottom:7px;text-transform:uppercase;border-bottom:1px solid var(--cyan3);padding-bottom:4px;}
+  .ls{margin-bottom:6px;}
+  .lst{font-size:.48rem;color:var(--text2);letter-spacing:.15em;text-transform:uppercase;margin-bottom:3px;opacity:.6;}
+  .li{display:flex;align-items:center;gap:6px;font-size:.55rem;color:var(--text2);margin-bottom:2px;line-height:1.2;}
+  .ldot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .lsq{width:8px;height:8px;flex-shrink:0;border:1px solid;}
+  .lline{width:16px;height:2px;flex-shrink:0;}
+  .lic{font-size:.52rem;padding:1px 4px;border-radius:2px;flex-shrink:0;background:rgba(255,34,68,.2);border:1px solid var(--red2);color:var(--red);}
+
+  #compass{position:absolute;top:12px;right:12px;z-index:20;font-size:.6rem;color:var(--cyan2);text-align:center;background:rgba(2,6,8,.92);border:1px solid var(--cyan3);padding:7px 9px;width:48px;line-height:1.5;}
+  #compass .n{color:var(--cyan);font-size:.72rem;font-weight:bold;}
+
+  #tooltip{position:absolute;background:rgba(2,6,8,.97);border:1px solid var(--cyan2);padding:4px 8px;font-size:.58rem;color:var(--cyan);pointer-events:none;z-index:30;display:none;white-space:nowrap;box-shadow:0 0 10px rgba(0,229,255,.2);}
+
+  #info-panel{background:var(--panel);border-left:1px solid var(--cyan3);display:flex;flex-direction:column;overflow:hidden;}
+  #info-header{padding:11px 16px 9px;border-bottom:1px solid var(--cyan3);background:rgba(0,229,255,.03);flex-shrink:0;}
+  .ihr1{display:flex;align-items:baseline;gap:9px;margin-bottom:2px;}
+  .room-id{font-family:'Orbitron',monospace;font-size:.6rem;font-weight:700;color:var(--cyan2);letter-spacing:.2em;}
+  .room-ab{font-size:.48rem;padding:1px 5px;border-radius:2px;letter-spacing:.1em;text-transform:uppercase;}
+  .room-ab.open{background:rgba(0,255,136,.12);border:1px solid var(--green);color:var(--green);}
+  .room-ab.locked{background:rgba(255,34,68,.15);border:1px solid var(--red);color:var(--red);animation:blink 1.5s infinite;}
+  .room-ab.warn{background:rgba(255,136,0,.15);border:1px solid var(--orange);color:var(--orange);}
+  .room-name{font-family:'Orbitron',monospace;font-size:.82rem;font-weight:700;color:var(--cyan);text-transform:uppercase;letter-spacing:.07em;line-height:1.2;text-shadow:0 0 8px rgba(0,229,255,.3);animation:flicker 8s infinite;}
+  .room-func{font-size:.55rem;color:var(--text2);letter-spacing:.1em;margin-top:2px;opacity:.8;}
+
+  #info-content{flex:1;overflow-y:auto;padding:11px 14px;scrollbar-width:thin;scrollbar-color:var(--cyan3) var(--panel);}
+  .db{margin-bottom:13px;}
+  .db h3{font-size:.53rem;color:var(--cyan2);letter-spacing:.22em;text-transform:uppercase;margin-bottom:4px;padding-bottom:2px;border-bottom:1px solid var(--cyan3);display:flex;align-items:center;gap:5px;}
+
+  .sg{display:grid;grid-template-columns:1fr 1fr;gap:5px;}
+  .si{background:var(--grey2);border:1px solid var(--border);padding:5px 8px;border-radius:2px;position:relative;overflow:hidden;}
+  .si::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;}
+  .si.ok::before{background:var(--green);}
+  .si.warn::before{background:var(--orange);}
+  .si.danger::before{background:var(--red);box-shadow:0 0 6px var(--red);}
+  .si.neutral::before{background:var(--cyan3);}
+  .slbl{font-size:.52rem;color:var(--text2);letter-spacing:.1em;text-transform:uppercase;}
+  .sval{font-family:'Orbitron',monospace;font-size:.75rem;font-weight:700;margin-top:2px;line-height:1.1;}
+  .sval.ok{color:var(--green);}
+  .sval.warn{color:var(--orange);}
+  .sval.danger{color:var(--red);text-shadow:0 0 6px rgba(255,34,68,.4);}
+  .sval.neutral{color:var(--cyan2);}
+
+  .icl{display:flex;flex-direction:column;gap:4px;}
+  .icn{background:rgba(139,0,32,.12);border:1px solid rgba(139,0,32,.4);border-left:3px solid var(--red);padding:5px 8px;display:flex;align-items:center;gap:7px;}
+  .ict{font-family:'Orbitron',monospace;font-size:.65rem;font-weight:700;color:var(--red);min-width:75px;}
+  .icl2{font-size:.56rem;color:var(--text2);flex:1;}
+  .icr{font-family:'Orbitron',monospace;font-size:.72rem;font-weight:700;color:var(--red);background:rgba(255,34,68,.1);border:1px solid var(--red2);padding:1px 5px;text-shadow:0 0 4px rgba(255,34,68,.5);}
+
+  .cl{display:flex;flex-direction:column;gap:3px;}
+  .ci{display:flex;align-items:center;gap:7px;font-size:.58rem;color:var(--text2);padding:3px 7px;border:1px solid var(--border);background:var(--grey2);}
+  .ci .cd{color:var(--cyan2);font-size:.62rem;min-width:14px;}
+  .ci .cdest{flex:1;}
+  .ci .clk{font-size:.5rem;padding:1px 4px;border-radius:2px;}
+  .ci .clk.open{color:var(--green);border:1px solid var(--green2);background:rgba(0,255,136,.08);}
+  .ci .clk.locked{color:var(--red);border:1px solid var(--red2);background:rgba(255,34,68,.08);animation:blink 1.5s infinite;}
+
+  .tl{display:flex;flex-wrap:wrap;gap:3px;}
+  .tag{font-size:.52rem;padding:2px 6px;border-radius:2px;letter-spacing:.1em;text-transform:uppercase;}
+  .tag.phys{background:rgba(0,255,136,.08);color:var(--green);border:1px solid var(--green2);}
+  .tag.matrix{background:rgba(0,229,255,.08);color:var(--cyan2);border:1px solid var(--cyan3);}
+  .tag.danger{background:rgba(255,34,68,.1);color:var(--red);border:1px solid var(--red2);animation:blink 2s infinite;}
+  .tag.info{background:rgba(255,136,0,.1);color:var(--orange);border:1px solid rgba(255,136,0,.3);}
+
+  .dnb{background:rgba(0,229,255,.06);border:1px solid var(--cyan3);border-left:3px solid var(--cyan2);padding:6px 10px;display:flex;align-items:center;gap:9px;}
+  .dni{font-size:.95rem;color:var(--cyan2);}
+  .dnt{font-size:.58rem;color:var(--text2);line-height:1.5;}
+  .dnt strong{color:var(--cyan);display:block;margin-bottom:1px;}
+
+  .redacted{background:#0a1418;border:1px solid rgba(255,34,68,.2);padding:7px 11px;position:relative;overflow:hidden;}
+  .redacted::after{content:'⬛⬛⬛  ACCÈS REFUSÉ  ⬛⬛⬛';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:.56rem;color:rgba(255,34,68,.35);letter-spacing:.2em;background:repeating-linear-gradient(45deg,rgba(255,34,68,.03) 0px,rgba(255,34,68,.03) 2px,transparent 2px,transparent 8px);}
+  .redacted-text{font-size:.7rem;color:transparent;user-select:none;filter:blur(3px);line-height:1.6;}
+
+  #ds{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:10px;padding:18px;text-align:center;}
+  #ds .dsi{font-size:1.8rem;color:var(--cyan3);}
+  #ds p{font-size:.6rem;color:var(--text2);letter-spacing:.12em;line-height:2;text-transform:uppercase;}
+  #ds .dsc{display:inline-block;animation:blink 1s infinite;color:var(--cyan);}
+
+  #info-footer{padding:7px 14px;border-top:1px solid var(--cyan3);font-size:.53rem;color:var(--text2);text-align:center;letter-spacing:.1em;background:rgba(0,229,255,.02);flex-shrink:0;display:flex;justify-content:space-between;align-items:center;}
+  #timer{color:var(--orange);font-size:.58rem;}
+  .room-name.glitch{animation:glitch 4s infinite,flicker 8s infinite;}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hl">MCT</div><div class="hsep">//</div>
+  <div class="hsub">XENOBIOLOGICAL DIV. · RÉSEAU INTERNE · SECTION DELTA · NV. −2</div>
+  <div class="hr">
+    <div class="hs"><span class="lbl">Firewall</span><span class="val danger">6</span></div>
+    <div class="hs"><span class="lbl">IC Actifs</span><span class="val danger">3</span></div>
+    <div class="hs"><span class="lbl">Alarme</span><span class="val danger">ACTIVE</span></div>
+    <div class="hs"><span class="lbl">Radiation</span><span class="val warn">MODÉRÉE</span></div>
+    <div class="hs"><span class="lbl">Nœuds</span><span class="val ok">12/12</span></div>
+  </div>
+</header>
+
+<div id="jb">
+  <div class="jbi"><div class="dot active"></div>CONNEXION ÉTABLIE</div>
+  <div class="jbi"><div class="dot danger"></div>IC PATROUILLE DÉTECTÉ</div>
+  <div class="jbi"><div class="dot warn"></div>CHIFFREMENT AES-4096</div>
+  <div class="jbi"><div class="dot active"></div>RÉSEAU LOCAL MAPPÉ</div>
+  <div class="jbbc">MCT-XENOBIO > DELTA > <span>PLAN_STRUCTURE_v4.2.dat</span></div>
+</div>
+
+<main>
+  <div id="map-panel">
+    <canvas id="map-canvas"></canvas>
+    <div id="map-title">MCT XENOBIOLOGICAL — SECTION DELTA — NIVEAU −2</div>
+
+    <div id="legend">
+      <h4>LÉGENDE RÉSEAU</h4>
+      <div class="ls"><div class="lst">Sécurité physique</div>
+        <div class="li"><div class="ldot" style="background:#c42b2b"></div>Garde armé (Niv. 6)</div>
+        <div class="li"><div class="ldot" style="background:#ffaa00"></div>Caméra / capteur</div>
+        <div class="li"><div class="ldot" style="background:#44ff88"></div>Entrée / Sortie</div>
+      </div>
+      <div class="ls"><div class="lst">Sécurité matrice</div>
+        <div class="li"><div class="lic">IC</div>Programme IC actif</div>
+        <div class="li"><div class="ldot" style="background:#00e5ff"></div>Nœud réseau / terminal</div>
+        <div class="li"><div class="ldot" style="background:#c9a84c"></div>Données protégées</div>
+      </div>
+      <div class="ls"><div class="lst">Accès</div>
+        <div class="li"><div class="lline" style="background:#ff2244"></div>Verrouillé (badge/hack)</div>
+        <div class="li"><div class="lline" style="background:#44ff88;opacity:.7"></div>Passage libre</div>
+      </div>
+    </div>
+
+    <div id="compass">
+      <div class="n">N</div><div>↑</div>
+      <div style="display:flex;justify-content:space-between;padding:0 2px"><span>O</span><span>E</span></div>
+      <div>S</div>
+    </div>
+
+    <div id="tooltip"></div>
+  </div>
+
+  <div id="info-panel">
+    <div id="info-header">
+      <div class="ihr1">
+        <div class="room-id" id="room-id">—</div>
+        <div class="room-ab" id="room-badge"></div>
+      </div>
+      <div class="room-name" id="room-name">SÉLECTIONNER UN NŒUD</div>
+      <div class="room-func" id="room-func">▶ CLIQUEZ SUR UNE SALLE POUR ACCÉDER AUX DONNÉES</div>
+    </div>
+    <div id="info-content">
+      <div id="ds"><div class="dsi">⬡</div>
+        <p>EN ATTENTE DE SÉLECTION<br>CLIQUEZ SUR UN NŒUD<br>DU RÉSEAU MCT</p>
+        <p><span class="dsc">_</span></p>
+      </div>
+      <div id="room-info" style="display:none"></div>
+    </div>
+    <div id="info-footer">
+      <span>MCT-XENOBIO · DELTA · <span style="color:var(--red)">ACCÈS NON AUTORISÉ</span></span>
+      <span id="timer">00:00:00</span>
+    </div>
+  </div>
+</main>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+// DONNÉES — ce que le Decker voit
+// ═══════════════════════════════════════════════════════════
+const ROOMS = {
+  acces:{
+    id:'A-01', name:'Puits d\'Accès — Niveau Surface',
+    func:'ACCÈS EXTÉRIEUR / POINT D\'ENTRÉE',
+    badge:'open', badgeLabel:'OUVERT',
+    sec:[{label:'Sécurité physique',value:'FAIBLE',cls:'ok'},{label:'Caméras',value:'0',cls:'ok'},{label:'Radiation',value:'1.2 mSv/h',cls:'ok'},{label:'Surveillance',value:'AUCUNE',cls:'ok'}],
+    ic:[],
+    tags:[{cls:'phys',label:'ENTRÉE PRINCIPALE'},{cls:'phys',label:'PASSAGE UNIQUE'}],
+    connectivity:[{dir:'↓',dest:'B-01 — Couloir Nord',lock:'open'}],
+    dataNode:null,
+    note:'Puits de descente vers le complexe. Aucune sécurité électronique détectée sur ce nœud.',
+  },
+  couloir_nord:{
+    id:'B-01', name:'Couloir Nord',
+    func:'COULOIR PRINCIPAL — ACCÈS ZONES C / D',
+    badge:'warn', badgeLabel:'SURVEILLÉ',
+    sec:[{label:'Caméras',value:'2 × FIXE',cls:'warn'},{label:'Gardes',value:'BINÔME',cls:'warn'},{label:'Patrouille',value:'12 min',cls:'warn'},{label:'IC réseau',value:'VIA B-03',cls:'neutral'}],
+    ic:[],
+    tags:[{cls:'phys',label:'PATROUILLE ACTIVE'},{cls:'matrix',label:'CAMÉRAS SUR RÉSEAU'}],
+    connectivity:[{dir:'↑',dest:'A-01 — Accès Surface',lock:'open'},{dir:'↓',dest:'C-01 / C-02 / D-01',lock:'open'},{dir:'→',dest:'B-02 — Sas Décontamination',lock:'locked'}],
+    dataNode:null,
+    note:'Les flux caméra de ce couloir transitent par le nœud B-03. Désactiver B-03 = blind spot total.',
+  },
+  sas:{
+    id:'B-02', name:'Sas de Décontamination',
+    func:'CONTRÔLE D\'ACCÈS — ZONE CONFINÉE',
+    badge:'locked', badgeLabel:'ACCRÉDITATION NIV.4',
+    sec:[{label:'Verrou',value:'MAG LVL 4',cls:'danger'},{label:'Badge requis',value:'NIV. 4',cls:'danger'},{label:'Alarme',value:'SI FORCÉ',cls:'danger'},{label:'Protocole',value:'DÉSACTIVÉ',cls:'ok'}],
+    ic:[{type:'PATROL IC',level:'Surveillance active',rating:'4'}],
+    tags:[{cls:'danger',label:'VERROU ÉLECTROMAGNÉTIQUE'},{cls:'danger',label:'ALARME LIAISON'}],
+    connectivity:[{dir:'←',dest:'B-01 — Couloir Nord',lock:'locked'},{dir:'→',dest:'D-01 / D-02 (zone confinée)',lock:'locked'}],
+    dataNode:null,
+    note:'Nœud de contrôle d\'accès. Déverrouillage possible via hack direct ou badge Niv.4 compromis.',
+  },
+  terminal:{
+    id:'B-03', name:'Terminal Réseau Central',
+    func:'NŒUD RÉSEAU — INFRASTRUCTURE MCT',
+    badge:'warn', badgeLabel:'ACCÈS TECHNICIENS',
+    sec:[{label:'Firewall',value:'6 (MCT)',cls:'danger'},{label:'Accès caméras',value:'OUI',cls:'warn'},{label:'Données',value:'DISPONIBLES',cls:'ok'},{label:'Présence',value:'Toutes 2h',cls:'warn'}],
+    ic:[{type:'BLASTER IC',level:'Piège — actif sur accès non autorisé',rating:'5'}],
+    tags:[{cls:'matrix',label:'NŒUD CENTRAL'},{cls:'danger',label:'IC BLASTER PIÈGE'},{cls:'info',label:'DONNÉES EM-7 ACCESSIBLES'}],
+    connectivity:[{dir:'←',dest:'B-01 — Couloir Nord',lock:'open'}],
+    dataNode:{title:'Données extraites : Réseau caméras + Logs chercheurs',detail:'Contrôle caméras B-01 · Accès logs EM-7 (chiffré) · Journaux d\'accès 30 jours'},
+    note:'Nœud critique. Compromission = contrôle du réseau de surveillance. Attention : IC Blaster en veille sur accès non autorisé.',
+  },
+  dortoir:{
+    id:'C-01', name:'Dortoir du Personnel',
+    func:'QUARTIERS — CHERCHEURS MCT',
+    badge:'open', badgeLabel:'ACCÈS LIBRE',
+    sec:[{label:'Occupants',value:'3 (nuit)',cls:'warn'},{label:'Armement',value:'AUCUN',cls:'ok'},{label:'Sécurité',value:'NULLE',cls:'ok'},{label:'Données',value:'LOCALES',cls:'neutral'}],
+    ic:[],
+    tags:[{cls:'phys',label:'PERSONNEL NON ARMÉ'},{cls:'info',label:'CASIER SÉCURISÉ (PERSO)'}],
+    connectivity:[{dir:'↑',dest:'B-01 — Couloir Nord',lock:'open'},{dir:'→',dest:'C-02 — Poste Garde',lock:'open'}],
+    dataNode:null,
+    note:'Pas de nœud réseau dédié. Terminaux personnels non inventoriés — accès potentiel à données non sauvegardées.',
+  },
+  poste_garde:{
+    id:'C-02', name:'Poste de Commandement Sécurité',
+    func:'SURVEILLANCE — MONITORING TEMPS RÉEL',
+    badge:'locked', badgeLabel:'PERSONNEL ARMÉ',
+    sec:[{label:'Gardes',value:'2 × NIV.6',cls:'danger'},{label:'Armement',value:'ARES ALPHA',cls:'danger'},{label:'Monitoring',value:'8 ÉCRANS',cls:'danger'},{label:'Renforts',value:'30 SEC',cls:'danger'}],
+    ic:[{type:'PATROL IC',level:'Surveillance — feed caméras en temps réel',rating:'6'}],
+    tags:[{cls:'danger',label:'GARDES × 2 ARMÉS'},{cls:'danger',label:'VISION TOTALE COULOIRS'},{cls:'matrix',label:'HUB SURVEILLANCE'}],
+    connectivity:[{dir:'←',dest:'C-01 — Dortoir',lock:'open'},{dir:'→',dest:'D-01 — Labo',lock:'open'},{dir:'↓',dest:'D-02 — Couloir Conf.',lock:'open'}],
+    dataNode:{title:'Nœud surveillance : accès lecture seule',detail:'Flux caméras temps réel · Log d\'incidents · Codes armurerie (chiffrés)'},
+    note:'Accès matrice possible via B-03 uniquement. Tentative d\'intrusion directe = alarme immédiate.',
+  },
+  labo_chimique:{
+    id:'D-01', name:'Laboratoire d\'Analyse',
+    func:'LABO XENOBIOLOGIQUE — ANALYSE EM-7',
+    badge:'warn', badgeLabel:'ACCRÉDITATION NIV.3',
+    sec:[{label:'Chercheurs',value:'2 × NIV.3',cls:'warn'},{label:'Radiation',value:'2.1 mSv/h',cls:'warn'},{label:'Échantillons',value:'EM-7 ACTIFS',cls:'danger'},{label:'Données',value:'LOCALES',cls:'ok'}],
+    ic:[],
+    tags:[{cls:'danger',label:'ÉCHANTILLONS ARTEFACT'},{cls:'info',label:'NOTES CHERCHEURS'},{cls:'matrix',label:'TERMINAL LOCAL'}],
+    connectivity:[{dir:'←',dest:'C-02 — Poste Garde',lock:'open'},{dir:'↓',dest:'D-02 — Couloir Conf.',lock:'open'}],
+    dataNode:{title:'Terminal local : données recherche',detail:'Notes d\'analyse EM-7 · Relevés spectrométriques · [███ CHIFFRÉ ███]'},
+    note:'Terminal labo connecté au réseau MCT mais non exposé sur le nœud central. Accès physique requis.',
+  },
+  couloir_central:{
+    id:'D-02', name:'Couloir Confinement',
+    func:'ACCÈS ZONE E — PROTOCOLE CONFINEMENT ACTIF',
+    badge:'warn', badgeLabel:'ZONE ROUGE',
+    sec:[{label:'Éclairage',value:'ROUGE',cls:'danger'},{label:'Radiation',value:'3.4 mSv/h',cls:'warn'},{label:'Garde isolé',value:'PATROUILLE',cls:'danger'},{label:'Capteurs',value:'4 × ACTIFS',cls:'warn'}],
+    ic:[{type:'TRACK IC',level:'Surveillance mouvement — déclenche alerte',rating:'5'}],
+    tags:[{cls:'danger',label:'PROTOCOLE CONFINEMENT'},{cls:'phys',label:'GARDE PATROUILLE 12min'}],
+    connectivity:[{dir:'↑',dest:'C-02 / D-01',lock:'open'},{dir:'↓',dest:'E-01 — Confinement EM-7',lock:'locked'},{dir:'↓',dest:'E-02 — Salle Autopsie',lock:'open'}],
+    dataNode:null,
+    note:'Couloir équipé de capteurs de mouvement reliés au poste de garde C-02. IC de tracking actif.',
+  },
+  confinement:{
+    id:'E-01', name:'Salle de Confinement — EM-7',
+    func:'CONFINEMENT PRIMAIRE — ARTEFACT CLASSIFIÉ',
+    badge:'locked', badgeLabel:'NIVEAU 5 — BIOMÉTRIQUE',
+    sec:[{label:'Verrou',value:'BIOMÉTRIQUE',cls:'danger'},{label:'Radiation',value:'6.8 mSv/h',cls:'danger'},{label:'Capteurs',value:'4 × MAGNÉT.',cls:'danger'},{label:'Anomalie',value:'DÉTECTÉE',cls:'danger'}],
+    ic:[{type:'BLACK IC',level:'Protection données — LÉTAL en matrice',rating:'8'},{type:'SPARKY IC',level:'Défense nœud — actif',rating:'6'}],
+    tags:[{cls:'danger',label:'IC LÉTAL ACTIF'},{cls:'danger',label:'VERROU BIOMÉTRIQUE'},{cls:'danger',label:'ANOMALIE ASTRALE'},{cls:'info',label:'OBJECTIF PRINCIPAL'}],
+    connectivity:[{dir:'↑',dest:'D-02 — Couloir Confinement',lock:'locked'}],
+    dataNode:{title:'Données confinement : ACCÈS REFUSÉ',detail:'[███████████ CHIFFREMENT NIVEAU 5 ███████████]\nClé biométrique requise — responsable labo uniquement'},
+    note:'ATTENTION : IC Black actif. Intrusion directe sans préparation = risque surchauffe critique. Recommandation : désactiver via B-03 avant tentative.',
+    isObjective:true,
+  },
+  salle_autopsie:{
+    id:'E-02', name:'Salle de Traitement Médical',
+    func:'MÉDICAL D\'URGENCE — USAGE INTERNE',
+    badge:'open', badgeLabel:'NON VERROUILLÉ',
+    sec:[{label:'Occupants',value:'VIDE (nuit)',cls:'ok'},{label:'Radiation',value:'1.8 mSv/h',cls:'ok'},{label:'Sécurité',value:'NULLE',cls:'ok'},{label:'Données',value:'SENSIBLES',cls:'warn'}],
+    ic:[],
+    tags:[{cls:'info',label:'DOSSIERS MÉDICAUX'},{cls:'info',label:'ACCÈS LIBRE NUIT'}],
+    connectivity:[{dir:'↑',dest:'D-02 — Couloir Confinement',lock:'open'},{dir:'→',dest:'F-01 — Générateurs',lock:'open'}],
+    dataNode:{title:'Dossiers médicaux — accès en clair',detail:'Rapport Dr. Navabi · Cause décès (officielle) · Photos pré/post exposition · [DONNÉES SENSIBLES]'},
+    note:'Aucune protection réseau sur ce nœud. Données médicales en clair — potentiellement compromettantes pour MCT.',
+  },
+  generateur:{
+    id:'F-01', name:'Infrastructure — Générateurs',
+    func:'ALIMENTATION ÉLECTRIQUE — SYSTÈMES CRITIQUES',
+    badge:'open', badgeLabel:'ACCÈS TECHNICIENS',
+    sec:[{label:'Occupants',value:'VIDE (nuit)',cls:'ok'},{label:'Systèmes',value:'CRITIQUES',cls:'warn'},{label:'Redondance',value:'40 sec batt.',cls:'warn'},{label:'Sabotage',value:'POSSIBLE',cls:'danger'}],
+    ic:[],
+    tags:[{cls:'matrix',label:'COUPURE SÉLECTIVE'},{cls:'danger',label:'SABOTAGE = ALARME COMPLÈTE'}],
+    connectivity:[{dir:'←',dest:'E-02 — Salle Médicale',lock:'open'},{dir:'→',dest:'F-02 — Sortie Urgence',lock:'open'}],
+    dataNode:{title:'Système électrique — contrôle disponible',detail:'Coupure sélective par zone · Coupure totale (40s avant alarme batterie) · Tableau 1963 non mappé'},
+    note:'Nœud non sécurisé. Contrôle de l\'alimentation électrique de tout le complexe accessible ici.',
+  },
+  sortie_urgence:{
+    id:'F-02', name:'Tunnel d\'Évacuation Est',
+    func:'SORTIE D\'URGENCE — NON RÉPERTORIÉE MCT',
+    badge:'open', badgeLabel:'IGNORÉ DE MCT',
+    sec:[{label:'MCT en aware',value:'NON',cls:'ok'},{label:'Caméras',value:'AUCUNE',cls:'ok'},{label:'Largeur',value:'80 cm',cls:'warn'},{label:'Distance',value:'35 m / surf',cls:'neutral'}],
+    ic:[],
+    tags:[{cls:'phys',label:'SORTIE NON SÉCURISÉE'},{cls:'info',label:'TRACES RÉCENTES (72H)'},{cls:'matrix',label:'HORS RÉSEAU MCT'}],
+    connectivity:[{dir:'←',dest:'F-01 — Générateurs',lock:'open'},{dir:'→',dest:'Surface (bât. effondré)',lock:'open'}],
+    dataNode:null,
+    note:'Ce tunnel n\'apparaît pas dans les plans d\'architecte MCT. Aucune surveillance réseau. Idéal pour exfiltration.',
+  },
+};
+
+// ═══════════════════════════════════════════════════════════
+// LAYOUT — grille contiguë
+// Les coordonnées sont en fractions [0..1] de la surface canvas.
+// Chaque pièce est définie par [clé, x, y, w, h, label].
+// Les pièces se touchent : bords partagés.
+//
+// Schéma (en colonnes proportionnelles) :
+//
+//  Col A (0.00–0.14)  : A-01 Accès (entrée)
+//  Col B (0.14–0.55)  : B-01 Couloir Nord (horizontal, large)
+//  Col C (0.55–0.70)  : B-02 Sas
+//  Col D (0.70–0.86)  : B-03 Terminal
+//  ─── niveau 2 ────
+//  (0.14–0.34) C-01 Dortoir
+//  (0.34–0.55) C-02 Poste garde
+//  (0.55–0.86) D-01 Labo chimique
+//  ─── niveau 3 ────
+//  (0.14–0.86) D-02 Couloir confinement (horizontal)
+//  ─── niveau 4 ────
+//  (0.14–0.44) E-01 Confinement
+//  (0.44–0.70) E-02 Autopsie/médical
+//  (0.70–0.86) F-01 Générateurs + F-02 Sortie (empilés verticalement)
+//
+// Axe Y :
+//  0.00–0.14  A-01 (entrée, côté gauche)
+//  0.00–0.14  B-01 (couloir, s'étend horizontalement)
+//  0.14–0.40  niveau 2
+//  0.40–0.55  D-02 couloir confinement
+//  0.55–0.82  niveau 4 (E-01, E-02, F-01)
+//  0.82–1.00  F-02 sortie (sous F-01)
+// ═══════════════════════════════════════════════════════════
+
+// Marges du complexe (par rapport au canvas)
+const MX = 0.05;   // marge gauche
+const MY = 0.03;   // marge haut
+const MW = 0.90;   // largeur utile
+const MH = 0.94;   // hauteur utile
+
+// Coordonnées relatives dans la zone utile [0..1]
+// transformées par : X_canvas = MX + rx*MW,  Y_canvas = MY + ry*MH
+
+// Grille de lignes de séparation (en unités relatives) :
+// Colonnes : 0, .155, .365, .575, .735, 1
+// Lignes   : 0, .14,  .42,  .57,  .80, 1
+
+const C0=0, C1=.155, C2=.365, C3=.575, C4=.735, C5=1;
+const R0=0, R1=.14,  R2=.42,  R3=.57,  R4=.80,  R5=1;
+
+// [key, rx, ry, rw, rh, label]
+const LAYOUT = [
+  // ── Niveau 1 : entrée + couloir ──────────────────────────
+  ['acces',          C0, R0, C1-C0, R1-R0, 'A-01\nENTRÉE'],
+  ['couloir_nord',   C1, R0, C3-C1, R1-R0, 'B-01 — COULOIR NORD'],
+  ['sas',            C3, R0, C4-C3, R1-R0, 'B-02\nSAS'],
+  ['terminal',       C4, R0, C5-C4, R1-R0, 'B-03\nRÉSEAU'],
+  // ── Niveau 2 : dortoir / garde / labo ────────────────────
+  ['dortoir',        C1, R1, C2-C1, R2-R1, 'C-01\nDORTOIR'],
+  ['poste_garde',    C2, R1, C3-C2, R2-R1, 'C-02\nGARDE'],
+  ['labo_chimique',  C3, R1, C5-C3, R2-R1, 'D-01\nLABO'],
+  // ── Niveau 3 : couloir confinement ───────────────────────
+  ['couloir_central',C1, R2, C5-C1, R3-R2, 'D-02 — COULOIR CONFINEMENT'],
+  // ── Niveau 4 : confinement / médical / infra ─────────────
+  ['confinement',    C1, R3, C3-C1, R4-R3, 'E-01\nCONFINEMENT\nEM-7'],
+  ['salle_autopsie', C3, R3, C4-C3, R4-R3, 'E-02\nMÉDICAL'],
+  ['generateur',     C4, R3, C5-C4, R4-R3, 'F-01\nGÉNÉRA-\nTEURS'],
+  // ── Niveau 5 : sortie ────────────────────────────────────
+  ['sortie_urgence', C4, R4, C5-C4, R5-R4, 'F-02\nSORTIE EST →'],
+];
+
+// ─ Portes ──────────────────────────────────────────────────
+// [rx, ry, horiz, locked]
+// Positions : centre du mur entre deux pièces
+const DOOR_DATA = [
+  // A-01 | B-01  (mur vertical, C1, entre R0 et R1)
+  [C1,     (R0+R1)/2, false, false],
+  // B-01 | B-02  (mur vertical, C3, entre R0 et R1)
+  [C3,     (R0+R1)/2, false, true ],
+  // B-03 | B-02  (mur vertical, C4, entre R0 et R1)
+  [C4,     (R0+R1)/2, false, false],
+  // B-01 | C-01  (mur horizontal, C1..C2, à R1)
+  [(C1+C2)/2, R1,    true,  false],
+  // B-01 | C-02  (mur horizontal, C2..C3, à R1)
+  [(C2+C3)/2, R1,    true,  false],
+  // B-02 | D-01  (mur horizontal, C3..C4, à R1)  (= sas → labo via décontam)
+  [(C3+C4)/2, R1,    true,  true ],
+  // C-01 | C-02  (mur vertical, C2, entre R1 et R2)
+  [C2,     (R1+R2)/2, false, false],
+  // C-02 | D-01  (mur vertical, C3, entre R1 et R2)
+  [C3,     (R1+R2)/2, false, false],
+  // C-01 | D-02  (mur horizontal, C1..C2, à R2)
+  [(C1+C2)/2, R2,    true,  false],
+  // C-02 | D-02  (mur horizontal, C2..C3, à R2)
+  [(C2+C3)/2, R2,    true,  false],
+  // D-01 | D-02  (mur horizontal, C3..C4, à R2)
+  [(C3+C4)/2, R2,    true,  false],
+  // D-02 | E-01  (mur horizontal, C1..C3, à R3)
+  [(C1+C3)/2, R3,    true,  true ],
+  // D-02 | E-02  (mur horizontal, C3..C4, à R3)
+  [(C3+C4)/2, R3,    true,  false],
+  // D-02 | F-01  (mur horizontal, C4..C5, à R3)
+  [(C4+C5)/2, R3,    true,  false],
+  // E-02 | F-01  (mur vertical, C4, entre R3 et R4)
+  [C4,     (R3+R4)/2, false, false],
+  // F-01 | F-02  (mur horizontal, C4..C5, à R4)
+  [(C4+C5)/2, R4,    true,  false],
+];
+
+// ─ Figurines ───────────────────────────────────────────────
+// [key, rx, ry, type]
+const FIGURES = [
+  ['couloir_nord',    (C1+C2)/2-.03, (R0+R1)/2, 'guard'],
+  ['couloir_nord',    (C1+C2)/2+.06, (R0+R1)/2, 'guard'],
+  ['poste_garde',     (C2+C3)/2-.02, (R1+R2)/2-.05, 'guard'],
+  ['poste_garde',     (C2+C3)/2+.04, (R1+R2)/2+.05, 'guard'],
+  ['couloir_central', (C1+C5)/2,    (R2+R3)/2, 'guard'],
+  ['terminal',        (C4+C5)/2,    (R0+R1)/2, 'node'],
+  ['confinement',     (C1+C3)/2,    (R3+R4)/2, 'objective'],
+  ['acces',           (C0+C1)/2,    (R0+R1)/2, 'entry'],
+  ['sortie_urgence',  (C4+C5)/2,    (R4+R5)/2, 'exit'],
+  // caméras
+  ['couloir_nord',    C1+.04,       R0+.02,    'camera'],
+  ['couloir_nord',    C3-.05,       R0+.02,    'camera'],
+  ['poste_garde',     (C2+C3)/2,    R1+.01,    'camera'],
+  // IC
+  ['terminal',        C4+.02,       R0+.10,    'ic'],
+  ['confinement',     C1+.04,       R3+.08,    'ic'],
+  ['confinement',     C1+.04,       R3+.18,    'ic'],
+  ['sas',             C3+.02,       R0+.10,    'ic'],
+  ['couloir_central', (C1+C5)/2-.1,(R2+R3)/2, 'ic'],
+];
+
+// ─ Liens réseau matriciel ──────────────────────────────────
+// [rx1, ry1, rx2, ry2]  (coord relatives)
+const NETLINKS = [
+  [C4+.03, (R0+R1)/2,   C1+.08, (R0+R1)/2 ],   // B-03 → B-01 (caméras)
+  [C4+.03, (R0+R1)/2,   (C2+C3)/2, (R1+R2)/2 ], // B-03 → C-02 (monitoring)
+  [C3+.02, (R0+R1)/2,   C3+.02, (R2+R3)/2 ],    // B-02 → D-02 (sensor relay)
+];
+
+// ═══════════════════════════════════════════════════════════
+// CANVAS
+// ═══════════════════════════════════════════════════════════
+const canvas = document.getElementById('map-canvas');
+const ctx = canvas.getContext('2d');
+let W, H, hovered=null, selected=null;
+
+function resize() {
+  const p = document.getElementById('map-panel');
+  W = p.clientWidth; H = p.clientHeight;
+  canvas.width = W; canvas.height = H;
+}
+
+// Convertit coordonnée relative → pixel canvas
+function px(r) { return Math.round(MX*W + r*MW*W); }
+function py(r) { return Math.round(MY*H + r*MH*H); }
+
+const SEC = {
+  none:    {fill:'#020a08', stroke:'#114433'},
+  low:     {fill:'#020a08', stroke:'#0d3322'},
+  med:     {fill:'#060d12', stroke:'#0a2a3a'},
+  high:    {fill:'#080a06', stroke:'#1a3000'},
+  critical:{fill:'#0a0606', stroke:'#3a0010'},
+};
+const ROOM_SEC = {
+  acces:'low', couloir_nord:'med', sas:'high', terminal:'high',
+  dortoir:'low', poste_garde:'critical', labo_chimique:'med',
+  couloir_central:'high', confinement:'critical', salle_autopsie:'low',
+  generateur:'low', sortie_urgence:'none',
+};
+const SEC_TEXT = {
+  none:'#336655', low:'#336655', med:'#2a5570', high:'#4a6020', critical:'#6a1030'
+};
+
+function drawGrid() {
+  ctx.strokeStyle = 'rgba(0,70,90,0.12)';
+  ctx.lineWidth = 1;
+  const s = Math.min(W,H)/28;
+  for(let x=0;x<W;x+=s){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=s){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+}
+
+function drawRoom(key, rx, ry, rw, rh, label) {
+  const x=px(rx), y=py(ry), w=px(rx+rw)-px(rx), h=py(ry+rh)-py(ry);
+  const sel=selected===key, hov=hovered===key;
+  const sec=SEC[ROOM_SEC[key]||'low'];
+  const room=ROOMS[key];
+
+  // Fill
+  ctx.fillStyle = sel ? (ROOM_SEC[key]==='critical'?'#180810':'#081418')
+                : hov ? (ROOM_SEC[key]==='critical'?'#110608':'#061012')
+                : sec.fill;
+  ctx.fillRect(x,y,w,h);
+
+  // Objectif pulse
+  if(room?.isObjective){
+    const a=0.06+0.06*Math.sin(Date.now()/400);
+    ctx.fillStyle=`rgba(255,34,68,${a})`;
+    ctx.fillRect(x,y,w,h);
+  }
+
+  // Bordure — on ne dessine QUE le contour de chaque pièce.
+  // Les murs intérieurs partagés entre deux pièces se superposent naturellement.
+  ctx.strokeStyle = sel?'#00e5ff': hov?'#00b8cc': sec.stroke;
+  ctx.lineWidth = sel?2: hov?1.5: 1;
+  ctx.strokeRect(x+.5,y+.5,w-1,h-1);
+
+  // Glow de sélection
+  if(sel){
+    ctx.shadowColor='#00e5ff'; ctx.shadowBlur=10;
+    ctx.strokeRect(x+.5,y+.5,w-1,h-1);
+    ctx.shadowBlur=0;
+    ctx.fillStyle='#00e5ff';
+    [[x,y],[x+w,y],[x,y+h],[x+w,y+h]].forEach(([cx,cy])=>ctx.fillRect(cx-3,cy-3,6,6));
+  }
+
+  // Label
+  const lines=label.split('\n');
+  const fs=Math.max(7,Math.min(10, Math.min(w,h)/Math.max(lines.length*2.2,4)));
+  ctx.font=`bold ${fs}px 'Share Tech Mono',monospace`;
+  ctx.textAlign='center'; ctx.textBaseline='middle';
+  if(sel||hov){ctx.shadowColor=sel?'#00e5ff':'#00b8cc';ctx.shadowBlur=6;}
+  ctx.fillStyle=sel?'#00e5ff':hov?'#00b8cc':SEC_TEXT[ROOM_SEC[key]||'low'];
+  const lh=fs*1.32, totalH=lines.length*lh;
+  const sy=y+h/2-totalH/2;
+  lines.forEach((ln,i)=>ctx.fillText(ln, x+w/2, sy+i*lh+lh/2));
+  ctx.shadowBlur=0;
+}
+
+function drawDoors() {
+  DOOR_DATA.forEach(([rx,ry,horiz,locked])=>{
+    const x=px(rx), y=py(ry);
+    const dw=horiz?14:4, dh=horiz?4:14;
+    ctx.fillStyle=locked?'rgba(139,0,32,0.55)':'rgba(0,255,136,0.14)';
+    ctx.fillRect(x-dw/2,y-dh/2,dw,dh);
+    ctx.strokeStyle=locked?'#ff2244':'#44ff88';
+    ctx.lineWidth=1.2;
+    ctx.strokeRect(x-dw/2,y-dh/2,dw,dh);
+  });
+}
+
+function drawNetLinks() {
+  ctx.setLineDash([2,6]);
+  ctx.strokeStyle='rgba(0,180,204,0.10)'; ctx.lineWidth=1;
+  NETLINKS.forEach(([rx1,ry1,rx2,ry2])=>{
+    ctx.beginPath();
+    ctx.moveTo(px(rx1),py(ry1));
+    ctx.lineTo(px(rx2),py(ry2));
+    ctx.stroke();
+  });
+  ctx.setLineDash([]);
+}
+
+function drawPatrols() {
+  ctx.setLineDash([3,5]);
+  ctx.strokeStyle='rgba(196,43,43,0.28)'; ctx.lineWidth=1.5;
+  // Patrouille B-01 : longe le couloir nord
+  const by=(py(R0)+py(R1))/2;
+  ctx.beginPath();
+  ctx.moveTo(px(C1+.03),by);
+  ctx.lineTo(px(C3-.03),by);
+  ctx.stroke();
+  // Patrouille D-02 : longe le couloir confinement
+  const dy=(py(R2)+py(R3))/2;
+  ctx.beginPath();
+  ctx.moveTo(px(C1+.03),dy);
+  ctx.lineTo(px(C5-.03),dy);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  // flèches
+  [[px(C3-.03),by],[px(C5-.03),dy]].forEach(([ax,ay])=>{
+    ctx.fillStyle='rgba(196,43,43,0.5)';
+    ctx.beginPath();
+    ctx.moveTo(ax,ay);
+    ctx.lineTo(ax-8,ay-5);
+    ctx.lineTo(ax-8,ay+5);
+    ctx.closePath();
+    ctx.fill();
+  });
+}
+
+function drawFigures() {
+  const r=Math.min(W,H)*.013;
+  FIGURES.forEach(([,frx,fry,type])=>{
+    const x=px(frx), y=py(fry);
+
+    if(type==='camera'){
+      ctx.fillStyle='rgba(255,136,0,0.82)';
+      ctx.strokeStyle='#ff8800'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.rect(x-5,y-4,10,8); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle='rgba(255,136,0,0.14)'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-18,y+14); ctx.lineTo(x+18,y+14); ctx.closePath();
+      ctx.stroke();
+      ctx.fillStyle='rgba(255,136,0,0.04)'; ctx.fill();
+      return;
+    }
+    if(type==='ic'){
+      const t=Date.now()/1000;
+      const a=0.7+0.3*Math.sin(t*3);
+      ctx.save(); ctx.translate(x,y); ctx.rotate(Math.PI/4);
+      ctx.fillStyle=`rgba(255,34,68,${a*.3})`;
+      ctx.strokeStyle=`rgba(255,34,68,${a})`;
+      ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.rect(-4,-4,8,8); ctx.fill(); ctx.stroke();
+      ctx.restore();
+      return;
+    }
+
+    const cfg={
+      guard:    {fill:'#c42b2bcc',stroke:'#c42b2b',lbl:'G'},
+      node:     {fill:'#00b8cccc',stroke:'#00e5ff', lbl:'⬡'},
+      objective:{fill:'#c9a84ccc',stroke:'#e8d48a', lbl:'◆'},
+      entry:    {fill:'#44ff88cc',stroke:'#44ff88', lbl:'↓'},
+      exit:     {fill:'#44ff88cc',stroke:'#44ff88', lbl:'→'},
+    }[type]||{fill:'#333',stroke:'#555',lbl:'?'};
+
+    ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle=cfg.fill; ctx.fill();
+    ctx.strokeStyle=cfg.stroke; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle= type==='objective'?'#080c0f':'#fff';
+    ctx.font=`bold ${Math.max(6,r*.9)}px 'Share Tech Mono'`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(cfg.lbl,x,y);
+  });
+}
+
+function drawZoneLabels() {
+  // Étiquettes de zones semi-transparentes dans les coins
+  const zones=[
+    [C0+(C1-C0)*.5, R0+(R1-R0)*.08,'ZONE A'],
+    [C1+(C3-C1)*.5, R0+(R1-R0)*.08,'ZONE B'],
+    [C1+(C2-C1)*.5, R1+(R2-R1)*.08,'ZONE C'],
+    [C3+(C5-C3)*.5, R1+(R2-R1)*.08,'ZONE D (LABO)'],
+    [C1+(C5-C1)*.5, R2+(R3-R2)*.2, 'ZONE D (COULOIR)'],
+    [C1+(C3-C1)*.5, R3+(R4-R3)*.08,'ZONE E'],
+    [C4+(C5-C4)*.5, R3+(R4-R3)*.08,'ZONE F'],
+  ];
+  ctx.font=`bold 7px 'Share Tech Mono'`;
+  ctx.textAlign='center'; ctx.fillStyle='rgba(0,229,255,0.14)';
+  zones.forEach(([rx,ry,lbl])=>ctx.fillText(lbl,px(rx),py(ry)));
+}
+
+function drawScale() {
+  const bw=px(.08)-px(0), bx=px(.74), by=H-12;
+  ctx.strokeStyle='rgba(0,180,204,0.4)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx+bw,by); ctx.stroke();
+  [bx,bx+bw].forEach(x=>{ctx.beginPath();ctx.moveTo(x,by-3);ctx.lineTo(x,by+3);ctx.stroke();});
+  ctx.fillStyle='rgba(0,180,204,0.5)';
+  ctx.font='7px Share Tech Mono'; ctx.textAlign='center';
+  ctx.fillText('~10m',bx+bw/2,by+5);
+}
+
+function draw() {
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#020608'; ctx.fillRect(0,0,W,H);
+  drawGrid();
+  // Contour du complexe
+  ctx.strokeStyle='rgba(0,100,130,0.22)'; ctx.lineWidth=2;
+  ctx.strokeRect(px(C0)+1,py(R0)+1, px(C5)-px(C0)-2, py(R5)-py(R0)-2);
+  drawNetLinks();
+  LAYOUT.forEach(([k,rx,ry,rw,rh,lbl])=>drawRoom(k,rx,ry,rw,rh,lbl));
+  drawZoneLabels();
+  drawDoors();
+  drawPatrols();
+  drawFigures();
+  drawScale();
+}
+
+function animate(){ draw(); requestAnimationFrame(animate); }
+
+// ─ Hit test ────────────────────────────────────────────────
+function getRoomAt(mx,my) {
+  const rx=(mx-MX*W)/(MW*W), ry=(my-MY*H)/(MH*H);
+  for(const [k,x,y,w,h] of LAYOUT)
+    if(rx>=x&&rx<=x+w&&ry>=y&&ry<=y+h) return k;
+  return null;
+}
+
+// ─ Interactions ────────────────────────────────────────────
+const tooltip=document.getElementById('tooltip');
+canvas.addEventListener('mousemove',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const key=getRoomAt(e.clientX-rect.left,e.clientY-rect.top);
+  hovered=key;
+  canvas.style.cursor=key?'pointer':'crosshair';
+  if(key){
+    tooltip.style.display='block';
+    tooltip.style.left=(e.clientX-rect.left+14)+'px';
+    tooltip.style.top =(e.clientY-rect.top -8)+'px';
+    tooltip.textContent=`${ROOMS[key].id} — ${ROOMS[key].name}`;
+  } else tooltip.style.display='none';
+});
+canvas.addEventListener('mouseleave',()=>{ hovered=null; tooltip.style.display='none'; });
+canvas.addEventListener('click',e=>{
+  const rect=canvas.getBoundingClientRect();
+  const key=getRoomAt(e.clientX-rect.left,e.clientY-rect.top);
+  if(key){ selected=key; showInfo(key); }
+});
+
+// ─ Panneau info ─────────────────────────────────────────────
+function showInfo(key) {
+  const room=ROOMS[key];
+  if(!room) return;
+  document.getElementById('room-id').textContent=room.id;
+  document.getElementById('room-name').textContent=room.name;
+  document.getElementById('room-name').className='room-name'+(room.isObjective?' glitch':'');
+  document.getElementById('room-func').textContent='▶ '+room.func;
+  const badge=document.getElementById('room-badge');
+  badge.textContent=room.badgeLabel;
+  badge.className='room-ab '+(room.badge==='open'?'open':room.badge==='locked'?'locked':'warn');
+
+  document.getElementById('ds').style.display='none';
+  const info=document.getElementById('room-info');
+  info.style.display='block';
+
+  const secH=`<div class="sg">${room.sec.map(s=>`<div class="si ${s.cls}"><div class="slbl">${s.label}</div><div class="sval ${s.cls}">${s.value}</div></div>`).join('')}</div>`;
+
+  const icH=room.ic.length
+    ?`<div class="icl">${room.ic.map(ic=>`<div class="icn"><span class="ict">${ic.type}</span><span class="icl2">${ic.level}</span><span class="icr">${ic.rating}</span></div>`).join('')}</div>`
+    :`<div class="si ok" style="padding:6px 9px"><div class="sval ok" style="font-size:.68rem">AUCUN IC DÉTECTÉ</div></div>`;
+
+  const connH=`<div class="cl">${room.connectivity.map(c=>`<div class="ci"><span class="cd">${c.dir}</span><span class="cdest">${c.dest}</span><span class="clk ${c.lock}">${c.lock==='open'?'OUVERT':'VERROUILLÉ'}</span></div>`).join('')}</div>`;
+
+  const tagsH=`<div class="tl">${room.tags.map(t=>`<span class="tag ${t.cls}">${t.label}</span>`).join('')}</div>`;
+
+  let dataH='';
+  if(room.dataNode){
+    const red=room.dataNode.detail.includes('███');
+    dataH=`<div class="db"><h3><span>⬡</span> NŒUD DE DONNÉES</h3>`
+      +`<div class="dnb"><span class="dni">⬡</span><div class="dnt"><strong>${room.dataNode.title}</strong>${red?'':room.dataNode.detail}</div></div>`
+      +(red?`<div class="redacted" style="margin-top:5px"><div class="redacted-text">${room.dataNode.detail}</div></div>`:'')
+      +`</div>`;
+  }
+
+  info.innerHTML=`
+    <div class="db"><h3><span>◉</span> SÉCURITÉ PHYSIQUE</h3>${secH}</div>
+    <div class="db"><h3><span>◈</span> IC ACTIFS SUR CE NŒUD</h3>${icH}</div>
+    ${dataH}
+    <div class="db"><h3><span>⬡</span> CONNECTIVITÉ RÉSEAU</h3>${connH}</div>
+    <div class="db"><h3><span>◈</span> TAGS / MÉTADONNÉES</h3>${tagsH}</div>
+    <div class="db"><h3><span>▶</span> NOTE OPÉRATIONNELLE</h3>
+      <div style="font-size:.7rem;color:var(--text);line-height:1.7;border-left:2px solid var(--cyan3);padding-left:9px">${room.note}</div>
+    </div>`;
+  document.getElementById('info-content').scrollTop=0;
+}
+
+// ─ Timer ───────────────────────────────────────────────────
+const t0=Date.now();
+setInterval(()=>{
+  const s=Math.floor((Date.now()-t0)/1000);
+  document.getElementById('timer').textContent=
+    `${String(Math.floor(s/3600)).padStart(2,'0')}:${String(Math.floor(s%3600/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
+},1000);
+
+// ─ Init ────────────────────────────────────────────────────
+window.addEventListener('resize',()=>{resize();});
+resize();
+animate();
+</script>
+</body>
+</html>
